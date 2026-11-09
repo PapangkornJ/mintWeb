@@ -1,0 +1,24 @@
+{
+  "name": "nexusstore-ecommerce",
+  "type": "commonjs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-commerce demo with PostgreSQL, Redis stock reservation and Meilisearch",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test:concurrency": "node test-concurrency.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "meilisearch": "^0.63.0",
+    "pg": "^8.13.1",
+    "redis": "^4.7.0"
+  }
+}

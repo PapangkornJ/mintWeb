@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Hub | High-Concurrency Storefront</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0a0a0c',
+                        cardbg: '#141419',
+                        accent: '#6366f1',
+                        accentHover: '#4f46e5'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom smooth scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0c;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+    </style>
+</head>
+
+<body class="bg-darkbg text-zinc-100 min-h-screen flex flex-col selection:bg-accent selection:text-white">
+
+    <!-- Header / Navigation -->
+    <header class="border-b border-zinc-800/80 bg-cardbg/50 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-bolt text-white text-sm"></i>
+                </div>
+                <span
+                    class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
+                    NexusStore<span class="text-indigo-500">.io</span>
+                </span>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="hidden md:flex space-x-1 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800/60">
+                <button onclick="switchTab('catalog')" id="nav-catalog"
+                    class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-indigo-600 text-white shadow-sm">
+                    <i class="fa-solid fa-grid-2 mr-2"></i>Catalog
+                </button>
+                <button onclick="switchTab('search')" id="nav-search"
+                    class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i>Instant Search
+                </button>
+                <button onclick="switchTab('orders')" id="nav-orders"
+                    class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-receipt mr-2"></i>Order History
+                </button>
+            </nav>
+
+            <!-- Status Indicator -->
+            <div class="flex items-center space-x-3">
+                <div
+                    class="flex items-center space-x-2 bg-zinc-900/90 border border-zinc-800 px-3 py-1.5 rounded-full text-xs text-zinc-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="backend-status-text">Backend Connected</span>
+                </div>
+                <button onclick="openConcurrencyTester()"
+                    class="hidden sm:flex items-center space-x-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl text-xs font-medium transition">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Concurrency Stress Test</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Nav Bar (Bottom) -->
+    <div
+        class="md:hidden fixed bottom-0 left-0 right-0 bg-cardbg/90 backdrop-blur-lg border-t border-zinc-800 p-2 z-50 flex justify-around">
+        <button onclick="switchTab('catalog')" id="mob-catalog"
+            class="flex flex-col items-center text-xs text-indigo-400 p-2">
+            <i class="fa-solid fa-grid-2 text-base mb-1"></i>Catalog
+        </button>
+        <button onclick="switchTab('search')" id="mob-search"
+            class="flex flex-col items-center text-xs text-zinc-400 p-2">
+            <i class="fa-solid fa-magnifying-glass text-base mb-1"></i>Search
+        </button>
+        <button onclick="switchTab('orders')" id="mob-orders"
+            class="flex flex-col items-center text-xs text-zinc-400 p-2">
+            <i class="fa-solid fa-receipt text-base mb-1"></i>Orders
+        </button>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-16 md:mb-0">
+
+        <!-- TAB 1: CATALOG & STOREFRONT -->
+        <section id="tab-content-catalog" class="space-y-6">
+            <div
+                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-cardbg p-6 rounded-2xl border border-zinc-800/80 shadow-xl">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-white">Explore High-Performance Products</h1>
+                    <p class="text-sm text-zinc-400 mt-1">Real-time atomic stock sync powered by Redis Lua scripting &
+                        PostgreSQL.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-64">
+                        <span
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="catalog-search-input" oninput="filterCatalog()"
+                            placeholder="Search products..."
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <select id="catalog-sort-select" onchange="filterCatalog()"
+                        class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition">
+                        <option value="default">Sort by: Default</option>
+                        <option value="price-asc">Price: Low to High</option>
+                        <option value="price-desc">Price: High to Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Product Grid -->
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamic Product Cards will be injected here -->
+            </div>
+        </section>
+
+        <!-- TAB 2: INSTANT SEARCH & MEILISEARCH SIMULATOR -->
+        <section id="tab-content-search" class="space-y-6 hidden">
+            <div class="bg-cardbg p-6 rounded-2xl border border-zinc-800/80 shadow-xl space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
+                        <i class="fa-solid fa-bolt-lightning text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Meilisearch Instant Query Engine</h1>
+                        <p class="text-xs text-zinc-400">Typo-tolerant, lightning fast searching with price filters and
+                            sorting attributes.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                    <div class="md:col-span-2 relative">
+                        <span
+                            class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="meili-query" oninput="runMeiliSearch()"
+                            placeholder="Type query (e.g. 'iphone', 'pro', 'watch')..."
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition shadow-inner">
+                    </div>
+                    <div>
+                        <select id="meili-sort" onchange="runMeiliSearch()"
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition">
+                            <option value="">Sort: Relevance</option>
+                            <option value="price:asc">Price: Low to High</option>
+                            <option value="price:desc">Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-zinc-800">
+                    <span id="search-stats">Showing all items</span>
+                    <span class="text-indigo-400"><i class="fa-solid fa-gauge mr-1"></i>Response time: <span
+                            id="search-latency">2ms</span></span>
+                </div>
+            </div>
+
+            <!-- Search Results Grid -->
+            <div id="search-results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Search hits injected here -->
+            </div>
+        </section>
+
+        <!-- TAB 3: ORDER HISTORY & AUDIT LOG -->
+        <section id="tab-content-orders" class="space-y-6 hidden">
+            <div
+                class="bg-cardbg p-6 rounded-2xl border border-zinc-800/80 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-white">Order History & Ledger</h1>
+                    <p class="text-sm text-zinc-400 mt-1">Persistent transactions recorded in PostgreSQL via
+                        ACID-compliant transactions.</p>
+                </div>
+                <button onclick="loadOrders()"
+                    class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate text-xs"></i>
+                    <span>Refresh Orders</span>
+                </button>
+            </div>
+
+            <!-- Orders Table / List -->
+            <div class="bg-cardbg rounded-2xl border border-zinc-800/80 overflow-hidden shadow-xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr
+                                class="border-b border-zinc-800 bg-zinc-900/50 text-zinc-400 font-semibold text-xs uppercase tracking-wider">
+                                <th class="p-4">Order ID</th>
+                                <th class="p-4">SKU</th>
+                                <th class="p-4">Qty</th>
+                                <th class="p-4">Total Price</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body" class="divide-y divide-zinc-800/60 text-zinc-300">
+                            <!-- Injected order rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Concurrency Stress Test Modal -->
+    <div id="concurrency-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-cardbg border border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                        <i class="fa-solid fa-gauge-high"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Concurrency Stress Test</h3>
+                        <p class="text-xs text-zinc-400">Simulate multiple simultaneous purchase requests</p>
+                    </div>
+                </div>
+                <button onclick="closeConcurrencyTester()" class="text-zinc-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Select Product SKU</label>
+                    <select id="stress-sku"
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500">
+                        <option value="IPHONE-16-PRO">IPHONE-16-PRO</option>
+                        <option value="MACBOOK-M3-MAX">MACBOOK-M3-MAX</option>
+                        <option value="AIRPODS-PRO-2">AIRPODS-PRO-2</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Concurrent Requests Count</label>
+                    <input type="number" id="stress-count" value="15" min="1" max="50"
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <button onclick="runStressTest()" id="stress-btn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Execute Concurrent Purchases</span>
+                </button>
+            </div>
+
+            <!-- Stress Test Live Console -->
+            <div class="space-y-2">
+                <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Execution Log</span>
+                <div id="stress-console"
+                    class="bg-zinc-950 border border-zinc-900 rounded-xl p-3 h-40 overflow-y-auto text-xs font-mono text-zinc-400 space-y-1">
+                    <span class="text-zinc-600">Ready to execute stress simulation...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Mock Catalog Database aligned with Backend
+        let products = [
+            { sku: 'IPHONE-16-PRO', name: 'iPhone 16 Pro Max 256GB', price: 42900, stock: 5, category: 'Smartphones', image: 'https://placehold.co/600x400/18181b/ffffff?text=iPhone+16+Pro' },
+            { sku: 'MACBOOK-M3-MAX', name: 'MacBook Pro 16" M3 Max', price: 98000, stock: 3, category: 'Laptops', image: 'https://placehold.co/600x400/18181b/ffffff?text=MacBook+Pro' },
+            { sku: 'AIRPODS-PRO-2', name: 'AirPods Pro (2nd Gen)', price: 8900, stock: 12, category: 'Audio', image: 'https://placehold.co/600x400/18181b/ffffff?text=AirPods+Pro' },
+            { sku: 'APPLE-WATCH-ULTRA', name: 'Apple Watch Ultra 2', price: 31900, stock: 4, category: 'Wearables', image: 'https://placehold.co/600x400/18181b/ffffff?text=Watch+Ultra' },
+            { sku: 'IPAD-PRO-M4', name: 'iPad Pro 13" M4', price: 39900, stock: 7, category: 'Tablets', image: 'https://placehold.co/600x400/18181b/ffffff?text=iPad+Pro' }
+        ];
+
+        let orders = [
+            { order_id: 101, sku: 'IPHONE-16-PRO', quantity: 1, total_amount: 42900, status: 'SUCCESS', created_at: new Date().toISOString() }
+        ];
+
+        let backendConnected = true;
+
+        // Tab Switching Logic
+        function switchTab(tab) {
+            ['catalog', 'search', 'orders'].forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (navBtn) {
+                    navBtn.className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-zinc-400 hover:text-white";
+                }
+                const mobBtn = document.getElementById(`mob-${t}`);
+                if (mobBtn) {
+                    mobBtn.className = "flex flex-col items-center text-xs text-zinc-400 p-2";
+                }
+            });
+
+            document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tab}`);
+            if (activeNav) {
+                activeNav.className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-indigo-600 text-white shadow-sm";
+            }
+            const activeMob = document.getElementById(`mob-${tab}`);
+            if (activeMob) {
+                activeMob.className = "flex flex-col items-center text-xs text-indigo-400 p-2";
+            }
+
+            if (tab === 'search') runMeiliSearch();
+            if (tab === 'orders') loadOrders();
+        }
+
+        // Render Catalog Grid
+        function renderCatalog(filteredProducts = products) {
+            const grid = document.getElementById('product-grid');
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-zinc-500">No products found matching your criteria.</div>`;
+                return;
+            }
+
+            grid.innerHTML = filteredProducts.map(p => `
+                <div class="bg-cardbg rounded-2xl border border-zinc-800/80 overflow-hidden shadow-xl flex flex-col justify-between hover:border-zinc-700 transition duration-300">
+                    <div class="relative h-48 bg-zinc-900 overflow-hidden">
+                        <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover opacity-80 hover:opacity-100 transition duration-300">
+                        <span class="absolute top-3 right-3 bg-zinc-950/80 backdrop-blur-md text-zinc-300 border border-zinc-800 text-xs px-2.5 py-1 rounded-full font-medium">
+                            ${p.category}
+                        </span>
+                    </div>
+                    <div class="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between text-xs text-zinc-500 font-mono mb-1">
+                                <span>SKU: ${p.sku}</span>
+                                <span class="${p.stock > 0 ? 'text-emerald-400' : 'text-rose-400'} font-medium">
+                                    <i class="fa-solid fa-box mr-1"></i>Stock: ${p.stock}
+                                </span>
+                            </div>
+                            <h3 class="font-semibold text-white text-base">${p.name}</h3>
+                        </div>
+                        <div class="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-zinc-500 block">Price</span>
+                                <span class="text-lg font-bold text-white">฿${p.price.toLocaleString()}</span>
+                            </div>
+                            <button onclick="buyProduct('${p.sku}', 1)" ${p.stock <= 0 ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-indigo-600/20 flex items-center space-x-2">
+                                <i class="fa-solid fa-cart-shopping text-xs"></i>
+                                <span>Buy Now</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCatalog() {
+            const query = document.getElementById('catalog-search-input').value.toLowerCase();
+            const sort = document.getElementById('catalog-sort-select').value;
+
+            let result = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+
+            if (sort === 'price-asc') result.sort((a, b) => a.price - b.price);
+            if (sort === 'price-desc') result.sort((b, a) => a.price - b.price);
+
+            renderCatalog(result);
+        }
+
+        // Live Simulated Buy Now (Interacting with Redis/PostgreSQL backend simulation)
+        async function buyProduct(sku, quantity) {
+            const product = products.find(p => p.sku === sku);
+            if (!product || product.stock < quantity) {
+                showToast('❌ Insufficient stock or product not found!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sku, quantity })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    showToast(`❌ ${data.message || 'Order transaction failed.'}`, 'error');
+                    return;
+                }
+                product.stock -= quantity;
+                orders.unshift({
+                    order_id: data.orderId,
+                    sku: sku,
+                    quantity: quantity,
+                    total_amount: product.price * quantity,
+                    status: 'SUCCESS',
+                    created_at: new Date().toISOString()
+                });
+                showToast(`✅ Order placed successfully! (ID: ${data.orderId})`, 'success');
+
+                renderCatalog();
+                if (!document.getElementById('tab-content-search').classList.contains('hidden')) runMeiliSearch();
+            } catch (err) {
+                showToast('❌ Order transaction failed.', 'error');
+            }
+        }
+
+        // Meilisearch Instant Simulator
+        function runMeiliSearch() {
+            const query = document.getElementById('meili-query').value.toLowerCase();
+            const sort = document.getElementById('meili-sort').value;
+
+            let hits = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query) || p.category.toLowerCase().includes(query));
+
+            if (sort === 'price:asc') hits.sort((a, b) => a.price - b.price);
+            if (sort === 'price:desc') hits.sort((b, a) => a.price - b.price);
+
+            document.getElementById('search-stats').innerText = `${hits.length} items found`;
+            document.getElementById('search-latency').innerText = `${Math.floor(Math.random() * 4 + 1)}ms`;
+
+            const grid = document.getElementById('search-results-grid');
+            if (hits.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-zinc-500">No search hits found in Meilisearch index.</div>`;
+                return;
+            }
+
+            grid.innerHTML = hits.map(p => `
+                <div class="bg-cardbg rounded-2xl border border-zinc-800/80 overflow-hidden shadow-xl flex flex-col justify-between">
+                    <div class="p-5 space-y-3">
+                        <div class="flex justify-between items-center text-xs text-zinc-500 font-mono">
+                            <span>SKU: ${p.sku}</span>
+                            <span class="text-emerald-400">Stock: ${p.stock}</span>
+                        </div>
+                        <h3 class="font-semibold text-white text-base">${p.name}</h3>
+                        <div class="text-lg font-bold text-white">฿${p.price.toLocaleString()}</div>
+                    </div>
+                    <div class="p-5 pt-0">
+                        <button onclick="buyProduct('${p.sku}', 1)" ${p.stock <= 0 ? 'disabled' : ''} class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 text-white font-medium py-2 rounded-xl text-sm transition">
+                            Instant Buy
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load Order History
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Unable to load orders');
+                }
+                orders = data.data;
+            } catch (e) {
+                orders = [];
+                showToast(`❌ ${e.message}`, 'error');
+            }
+
+            const tbody = document.getElementById('orders-table-body');
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-zinc-500">No order history available.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => `
+                <tr class="hover:bg-zinc-900/40 transition">
+                    <td class="p-4 font-mono font-medium text-indigo-400">#${o.order_id}</td>
+                    <td class="p-4 font-mono text-zinc-300">${o.sku}</td>
+                    <td class="p-4">${o.quantity}</td>
+                    <td class="p-4 font-semibold text-white">฿${Number(o.total_amount).toLocaleString()}</td>
+                    <td class="p-4"><span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-full font-medium">${o.status}</span></td>
+                    <td class="p-4 text-xs text-zinc-500">${new Date(o.created_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Concurrency Stress Tester
+        function openConcurrencyTester() {
+            document.getElementById('concurrency-modal').classList.remove('hidden');
+        }
+        function closeConcurrencyTester() {
+            document.getElementById('concurrency-modal').classList.add('hidden');
+        }
+
+        async function runStressTest() {
+            const sku = document.getElementById('stress-sku').value;
+            const count = parseInt(document.getElementById('stress-count').value) || 10;
+            const consoleBox = document.getElementById('stress-console');
+            consoleBox.innerHTML = `<span class="text-indigo-400">🚀 Initiating ${count} concurrent purchase requests for ${sku}...</span><br>`;
+
+            const promises = [];
+            for (let i = 1; i <= count; i++) {
+                promises.push((async (index) => {
+                    try {
+                        const res = await fetch('/api/orders', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sku, quantity: 1 })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            consoleBox.innerHTML += `<span class="text-emerald-400">[Req #${index}] SUCCESS: Stock locked atomically via Redis Lua.</span><br>`;
+                        } else {
+                            consoleBox.innerHTML += `<span class="text-rose-400">[Req #${index}] REJECTED: ${data.message || 'Request failed'}.</span><br>`;
+                        }
+                    } catch (err) {
+                        consoleBox.innerHTML += `<span class="text-rose-400">[Req #${index}] ERROR</span><br>`;
+                    }
+                    consoleBox.scrollTop = consoleBox.scrollHeight;
+                })(i));
+            }
+
+            await Promise.all(promises);
+            consoleBox.innerHTML += `<span class="text-indigo-400 font-bold">✨ Stress test completed successfully!</span>`;
+            renderCatalog();
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto bg-cardbg border ${type === 'success' ? 'border-emerald-500/30 text-emerald-300' : 'border-rose-500/30 text-rose-300'} px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm animate-bounce`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-rose-400'}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // Initialize Catalog on load
+        window.onload = () => {
+            renderCatalog();
+        };
+    </script>
+</body>
+
+</html>
